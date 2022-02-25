@@ -1,5 +1,3 @@
-// @flow
-
 import { getBaseUrl } from '../base/util';
 
 import { FACE_BOX_EVENT_TYPE, DETECT_FACE_BOX } from './constants';

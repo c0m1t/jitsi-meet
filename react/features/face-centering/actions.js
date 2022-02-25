@@ -1,5 +1,3 @@
-// @flow
-
 import 'image-capture';
 
 import { getCurrentConference } from '../base/conference';
