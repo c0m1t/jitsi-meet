@@ -83,9 +83,11 @@ export function loadWorker() {
 /**
  * Starts the recognition and detection of face position.
  *
+ * @param {Track | undefined} track - Track for which to start detecting faces.
+ *
  * @returns {Function}
  */
-export function startFaceRecognition() {
+export function startFaceRecognition(track) {
     return async function(dispatch: Function, getState: Function) {
         if (!worker) {
             return;
@@ -94,12 +96,12 @@ export function startFaceRecognition() {
         const { recognitionActive } = state['features/face-centering'];
 
         if (recognitionActive) {
-            logger.log('Face centering is not active.');
+            logger.log('Face centering already active.');
 
             return;
         }
 
-        const localVideoTrack = getLocalVideoTrack(state['features/base/tracks']);
+        const localVideoTrack = track || getLocalVideoTrack(state['features/base/tracks']);
 
         if (!localVideoTrack) {
             logger.warn('Face centering is disabled due to missing local track.');

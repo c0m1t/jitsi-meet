@@ -21,6 +21,10 @@ const defaultState = {
      * 30% bottom indicates a 30% distance from the bottom edge of the video to the top edge of the detected face.
      */
     faceBoxes: {},
+
+    /**
+     * Flag indicating whether face recognition is currently running.
+     */
     recognitionActive: false
 };
 

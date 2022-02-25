@@ -5,7 +5,7 @@ import {
 } from '../base/conference';
 import { JitsiConferenceEvents } from '../base/lib-jitsi-meet';
 import { MiddlewareRegistry } from '../base/redux';
-import { TRACK_UPDATED, TRACK_REMOVED } from '../base/tracks';
+import { TRACK_UPDATED, TRACK_REMOVED, TRACK_ADDED } from '../base/tracks';
 
 import { UPDATE_FACE_COORDINATES } from './actionTypes';
 import {
@@ -31,17 +31,17 @@ MiddlewareRegistry.register(({ dispatch, getState }) => next => action => {
         // allow using remote face centering data when local face centering is not enabled
         action.conference.on(
             JitsiConferenceEvents.ENDPOINT_MESSAGE_RECEIVED,
-            (...args) => {
-                if (args && args.length >= 2) {
-                    const [ { _id }, eventData ] = args;
+            (participant, eventData) => {
+                if (!participant || !eventData) {
+                    return;
+                }
 
-                    if (eventData.type === FACE_BOX_EVENT_TYPE) {
-                        dispatch({
-                            type: UPDATE_FACE_COORDINATES,
-                            faceBox: eventData.faceBox,
-                            id: _id
-                        });
-                    }
+                if (eventData.type === FACE_BOX_EVENT_TYPE) {
+                    dispatch({
+                        type: UPDATE_FACE_COORDINATES,
+                        faceBox: eventData.faceBox,
+                        id: participant.getId()
+                    });
                 }
             });
 
@@ -58,33 +58,40 @@ MiddlewareRegistry.register(({ dispatch, getState }) => next => action => {
 
         return next(action);
     }
+    case TRACK_ADDED: {
+        const { jitsiTrack: { type, isLocal } } = action.track;
+
+        if (type === 'video' && isLocal()) {
+            // need to pass this since the track is not yet added in the store
+            dispatch(startFaceRecognition(action.track));
+        }
+
+        return next(action);
+    }
     case TRACK_UPDATED: {
-        const { videoType } = action.track.jitsiTrack;
+        const { jitsiTrack: { type, isLocal } } = action.track;
 
-        if (videoType === 'camera') {
-            const { muted, videoStarted } = action.track;
+        if (type !== 'video' || !isLocal()) {
+            return next(action);
+        }
 
-            // addresses video starting for the first time
-            if (videoStarted === true) {
+        const { muted } = action.track;
+
+        if (muted !== undefined) {
+            // addresses video mute state changes
+            if (muted) {
+                dispatch(stopFaceRecognition());
+            } else {
                 dispatch(startFaceRecognition());
-            }
-
-            if (muted !== undefined) {
-                // addresses video mute state changes
-                if (muted) {
-                    dispatch(stopFaceRecognition());
-                } else {
-                    dispatch(startFaceRecognition());
-                }
             }
         }
 
         return next(action);
     }
     case TRACK_REMOVED: {
-        const { videoType } = action.track.jitsiTrack;
+        const { jitsiTrack: { type, isLocal } } = action.track;
 
-        if ([ 'camera', 'desktop' ].includes(videoType)) {
+        if (type === 'video' && isLocal()) {
             dispatch(stopFaceRecognition());
         }
 
